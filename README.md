@@ -2,6 +2,7 @@
 this is a simple custom scheme variant implementation
 
 # example
-```sh
-./schemer "(= (+ 2 2) 4)"
+```scheme
+λ (= (+ 2 2) 4)
+true
 ```

@@ -1,6 +1,6 @@
 use chumsky::Parser;
 
-use rustyline::{DefaultEditor, error::ReadlineError};
+use rustyline::{error::ReadlineError, DefaultEditor};
 use vm::VM;
 
 use crate::vm::Value;
@@ -20,10 +20,10 @@ fn main() {
                     Ok(p) => {
                         let value = vm.evaluate(&p);
                         match value {
-                            Value::Nothing => {},
+                            Value::Nothing => {}
                             _ => println!("{value}"),
                         }
-                    },
+                    }
 
                     Err(e) => {
                         println!("{e:?}");
@@ -33,11 +33,11 @@ fn main() {
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
                 break;
-            },
+            }
             Err(ReadlineError::Eof) => {
                 println!("CTRL-D");
                 break;
-            },
+            }
             Err(e) => {
                 println!("{e:?}");
             }
