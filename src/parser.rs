@@ -1,4 +1,5 @@
 use chumsky::{number::format::RUST_LITERAL, prelude::*};
+use chumsky::extra;
 
 #[derive(Debug, Clone)]
 pub enum Sexpr {
@@ -8,20 +9,20 @@ pub enum Sexpr {
     String(String),
 }
 
-pub fn parse_sexpr<'a>() -> impl Parser<'a, &'a str, Sexpr> {
+pub fn parse_sexpr<'a>() -> impl Parser<'a, &'a str, Sexpr, extra::Err<Simple<'a, char>>> {
     recursive(|sexpr| {
-        let ident = text::ident()
+        let ident = text::ident::<_, extra::Err<Simple<'a, char>>>()
             .padded()
             .map(|x: &str| x.to_string())
-            .or(one_of("+-*/").map(|x: char| x.to_string()));
+            .or(one_of("+-*/=><").map(|x: char| x.to_string()));
 
-        let string = one_of("\"'")
+        let string = one_of::<_, _, extra::Err<Simple<'a, char>>>("\"'")
             .ignore_then(none_of("\"'").repeated().collect::<String>())
             .then_ignore(one_of("\"'"))
             .padded()
             .map(Sexpr::String);
 
-        let number = number::<RUST_LITERAL, &str, f32, _>()
+        let number = number::<RUST_LITERAL, &str, f32, extra::Err<Simple<'a, char>>>()
             .padded()
             .map(|x: f32| Sexpr::Number(x));
 

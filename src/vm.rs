@@ -32,23 +32,49 @@ pub struct VM {
 impl VM {
     pub fn new() -> VM {
         VM {
-            //special_cases: HashMap::from([("+".to_string(), VM::add_special_case as fn(&Self, &[Sexpr]) -> Value)]),
-            special_cases: HashMap::new(),
-            variables: vec![Variable {
-                name: "+".to_string(),
-                value: Value::Function(Function::Builtin(VM::add_builtin)),
-            },
-
-            Variable {
-                name: "-".to_string(),
-                value: Value::Function(Function::Builtin(VM::sub_builtin)),
-            },
-
-            Variable {
-                name: "display".to_string(),
-                value: Value::Function(Function::Builtin(VM::display_builtin)),
-            },
+            special_cases: HashMap::from([(
+                "if".to_string(),
+                VM::if_special_case as fn(&Self, &[Sexpr]) -> Value,
+            )]),
+            variables: vec![
+                Variable {
+                    name: "+".to_string(),
+                    value: Value::Function(Function::Builtin(VM::add_builtin)),
+                },
+                Variable {
+                    name: "-".to_string(),
+                    value: Value::Function(Function::Builtin(VM::sub_builtin)),
+                },
+                Variable {
+                    name: "display".to_string(),
+                    value: Value::Function(Function::Builtin(VM::display_builtin)),
+                },
+                Variable {
+                    name: "=".to_string(),
+                    value: Value::Function(Function::Builtin(VM::eq_builtin)),
+                },
             ],
+        }
+    }
+
+    fn if_special_case(&self, exprs: &[Sexpr]) -> Value {
+        let condition = self.evaluate(&exprs[1]);
+
+        let truth_value = {
+            match condition {
+                Value::False => false,
+                _ => true,
+            }
+        };
+
+        if truth_value {
+            self.evaluate(&exprs[2])
+        } else {
+            if let Some(else_cond) = exprs.get(3) {
+                self.evaluate(else_cond)
+            } else {
+                Value::Nothing
+            }
         }
     }
 
@@ -84,6 +110,22 @@ impl VM {
         }
 
         Value::Nothing
+    }
+
+    fn eq_builtin(values: &[Value]) -> Value {
+        let Value::Number(a) = values[0] else {
+            todo!()
+        };
+
+        let Value::Number(b) = values[1] else {
+            todo!()
+        };
+
+        if a == b {
+            Value::True
+        } else {
+            Value::False
+        }
     }
 
     pub fn evaluate(&self, expr: &Sexpr) -> Value {
