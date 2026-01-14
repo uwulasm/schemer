@@ -9,11 +9,12 @@ mod vm;
 
 fn main() {
     let mut rl = DefaultEditor::new().unwrap();
-    let vm = VM::new();
+    let mut vm = VM::new();
     loop {
         let readline = rl.readline("λ ");
         match readline {
             Ok(line) => {
+                rl.add_history_entry(&line).unwrap();
                 let parser = parser::parse_sexpr();
                 let parsed = parser.parse(&line);
                 match parsed.into_result() {

@@ -5,4 +5,6 @@ this is a simple custom scheme variant implementation
 ```scheme
 λ (= (+ 2 2) 4)
 true
+λ (if (= 2 3) (display "yay!") (display "nay!"))
+nay!
 ```

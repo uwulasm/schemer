@@ -18,7 +18,7 @@ impl Display for Value {
             Value::String(x) => write!(f, "{x}")?,
             Value::Function(_f) => write!(f, "function")?,
             Value::Number(x) => write!(f, "{x}")?,
-            Value::Nothing => {},
+            Value::Nothing => {}
             Value::True => write!(f, "true")?,
             Value::False => write!(f, "false")?,
         };
@@ -28,50 +28,50 @@ impl Display for Value {
 
 #[derive(Debug, Clone)]
 pub enum Function {
-    LangFunction(Sexpr),
+    LangFunction(Vec<String>, Sexpr),
     Builtin(fn(&[Value]) -> Value),
 }
 
-#[derive(Debug, Clone)]
-struct Variable {
-    name: String,
-    value: Value,
-}
-
 pub struct VM {
-    special_cases: HashMap<String, fn(&Self, &[Sexpr]) -> Value>,
-    variables: Vec<Variable>,
+    special_cases: HashMap<String, fn(&mut Self, &[Sexpr]) -> Value>,
+    variables: Vec<HashMap<String, Value>>,
 }
 
 impl VM {
     pub fn new() -> VM {
         VM {
-            special_cases: HashMap::from([(
-                "if".to_string(),
-                VM::if_special_case as fn(&Self, &[Sexpr]) -> Value,
-            )]),
-            variables: vec![
-                Variable {
-                    name: "+".to_string(),
-                    value: Value::Function(Function::Builtin(VM::add_builtin)),
-                },
-                Variable {
-                    name: "-".to_string(),
-                    value: Value::Function(Function::Builtin(VM::sub_builtin)),
-                },
-                Variable {
-                    name: "display".to_string(),
-                    value: Value::Function(Function::Builtin(VM::display_builtin)),
-                },
-                Variable {
-                    name: "=".to_string(),
-                    value: Value::Function(Function::Builtin(VM::eq_builtin)),
-                },
-            ],
+            special_cases: HashMap::from([
+                (
+                    "if".to_string(),
+                    VM::if_special_case as fn(&mut Self, &[Sexpr]) -> Value,
+                ),
+                (
+                    "define".to_string(),
+                    VM::define_special_case as fn(&mut Self, &[Sexpr]) -> Value,
+                ),
+            ]),
+            variables: vec![HashMap::from([
+                (
+                    "+".to_string(),
+                    Value::Function(Function::Builtin(VM::add_builtin)),
+                ),
+                (
+                    "-".to_string(),
+                    Value::Function(Function::Builtin(VM::sub_builtin)),
+                ),
+                (
+                    "display".to_string(),
+                    Value::Function(Function::Builtin(VM::display_builtin)),
+                ),
+                (
+                    "=".to_string(),
+                    Value::Function(Function::Builtin(VM::eq_builtin)),
+                ),
+            ])],
         }
     }
 
-    fn if_special_case(&self, exprs: &[Sexpr]) -> Value {
+    fn if_special_case(&mut self, exprs: &[Sexpr]) -> Value {
         let condition = self.evaluate(&exprs[1]);
 
         let truth_value = {
@@ -90,6 +90,35 @@ impl VM {
                 Value::Nothing
             }
         }
+    }
+
+    fn define_special_case(&mut self, exprs: &[Sexpr]) -> Value {
+        match exprs.get(1) {
+            Some(Sexpr::Ident(x)) => {
+                let value = self.evaluate(&exprs[2]);
+                self.variables.last_mut().unwrap().insert(x.clone(), value);
+            }
+
+            Some(Sexpr::List(x)) => {
+                let mut args = Vec::new();
+                let Sexpr::Ident(function_name) = x[0].clone() else {
+                    todo!()
+                };
+
+                for arg in &x[1..] {
+                    let Sexpr::Ident(argument) = arg else { todo!() };
+                    args.push(argument.clone());
+                }
+
+                self.variables.last_mut().unwrap().insert(
+                    function_name,
+                    Value::Function(Function::LangFunction(args, exprs[2].clone())),
+                );
+            }
+            _ => {}
+        };
+
+        Value::Nothing
     }
 
     fn add_builtin(values: &[Value]) -> Value {
@@ -124,13 +153,9 @@ impl VM {
     }
 
     fn eq_builtin(values: &[Value]) -> Value {
-        let Value::Number(a) = values[0] else {
-            todo!()
-        };
+        let Value::Number(a) = values[0] else { todo!() };
 
-        let Value::Number(b) = values[1] else {
-            todo!()
-        };
+        let Value::Number(b) = values[1] else { todo!() };
 
         if a == b {
             Value::True
@@ -139,19 +164,29 @@ impl VM {
         }
     }
 
-    pub fn evaluate(&self, expr: &Sexpr) -> Value {
+    fn get_variable(&self, x: &str) -> Option<Value> {
+        for variable_set in self.variables.iter().rev() {
+            if let Some(v) = variable_set.get(x) {
+                return Some(v.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn evaluate(&mut self, expr: &Sexpr) -> Value {
         match expr {
             Sexpr::String(x) => Value::String(x.clone()),
             Sexpr::Number(x) => Value::Number(*x),
-            Sexpr::Ident(_) => todo!(),
+            Sexpr::Ident(x) => self.get_variable(&x).unwrap(),
             Sexpr::List(list) => {
                 if let Some(prefix) = list.first() {
                     match prefix {
                         Sexpr::Ident(x) => {
                             if let Some(&special_case) = self.special_cases.get(x) {
                                 special_case(self, list)
-                            } else if let Some(v) = self.variables.iter().find(|&v| *x == v.name) {
-                                match &v.value {
+                            } else if let Some(v) = self.get_variable(x) {
+                                match &v {
                                     Value::Function(f) => {
                                         let arguments = list
                                             .iter()
@@ -160,7 +195,19 @@ impl VM {
                                             .collect::<Vec<_>>();
                                         match f {
                                             Function::Builtin(builtin) => builtin(&arguments),
-                                            _ => todo!(),
+                                            Function::LangFunction(args, body) => {
+                                                self.variables.push(HashMap::new());
+                                                for (e, arg) in (&list[1..]).iter().zip(args) {
+                                                    let value = self.evaluate(&e);
+                                                    self.variables
+                                                        .last_mut()
+                                                        .unwrap()
+                                                        .insert(arg.clone(), value);
+                                                }
+                                                let output = self.evaluate(&body);
+                                                self.variables.pop();
+                                                output
+                                            }
                                         }
                                     }
                                     _ => todo!(),
