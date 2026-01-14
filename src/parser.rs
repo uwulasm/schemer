@@ -1,6 +1,6 @@
 use chumsky::{number::format::RUST_LITERAL, prelude::*};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Sexpr {
     Ident(String),
     Number(f32),

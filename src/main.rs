@@ -1,11 +1,16 @@
 use chumsky::Parser;
 
+use vm::VM;
 mod parser;
+mod vm;
 
 fn main() {
     let parser = parser::parse_sexpr();
-    match parser.parse("(+ (+ 2 3) 4)").into_result() {
-        Ok(x) => println!("{x:#?}"),
+    let vm = VM::new();
+    match parser.parse("(+ (+ 2 3) 2)").into_result() {
+        Ok(x) => {
+            println!("{:?}", vm.evaluate(&x));
+        },
         Err(x) => println!("{x:?}"),
     }
 }
