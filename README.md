@@ -7,4 +7,7 @@ this is a simple custom scheme variant implementation
 true
 λ (if (= 2 3) (display "yay!") (display "nay!"))
 nay!
+λ (define (double x) (+ x x))
+λ (double 16)
+32
 ```
