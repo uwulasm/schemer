@@ -1,10 +1,10 @@
-use chumsky::prelude::todo;
 use std::collections::HashMap;
 
 use crate::parser::Sexpr;
 
 #[derive(Debug, Clone)]
 pub enum Value {
+    String(String),
     Function(Function),
     Number(f32),
     Nothing,
@@ -13,7 +13,7 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone)]
-enum Function {
+pub enum Function {
     LangFunction(Sexpr),
     Builtin(fn(&[Value]) -> Value),
 }
@@ -37,16 +37,18 @@ impl VM {
             variables: vec![Variable {
                 name: "+".to_string(),
                 value: Value::Function(Function::Builtin(VM::add_builtin)),
-            }],
-        }
-    }
+            },
 
-    fn add_special_case(&self, exprs: &[Sexpr]) -> Value {
-        let a = self.evaluate(&exprs[1]);
-        let b = self.evaluate(&exprs[2]);
-        match (a, b) {
-            (Value::Number(a), Value::Number(b)) => Value::Number(a + b),
-            _ => todo!(),
+            Variable {
+                name: "-".to_string(),
+                value: Value::Function(Function::Builtin(VM::sub_builtin)),
+            },
+
+            Variable {
+                name: "display".to_string(),
+                value: Value::Function(Function::Builtin(VM::display_builtin)),
+            },
+            ],
         }
     }
 
@@ -60,8 +62,33 @@ impl VM {
         Value::Number(total)
     }
 
+    fn sub_builtin(values: &[Value]) -> Value {
+        let Value::Number(mut total) = values[0] else {
+            todo!()
+        };
+
+        for value in values.iter().skip(1) {
+            let Value::Number(x) = value else { todo!() };
+            total -= x;
+        }
+
+        Value::Number(total)
+    }
+
+    fn display_builtin(values: &[Value]) -> Value {
+        for value in values {
+            match value {
+                Value::String(x) => println!("{x}"),
+                _ => todo!(),
+            }
+        }
+
+        Value::Nothing
+    }
+
     pub fn evaluate(&self, expr: &Sexpr) -> Value {
         match expr {
+            Sexpr::String(x) => Value::String(x.clone()),
             Sexpr::Number(x) => Value::Number(*x),
             Sexpr::Ident(_) => todo!(),
             Sexpr::List(list) => {
