@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::parser::Sexpr;
 
@@ -10,6 +10,20 @@ pub enum Value {
     Nothing,
     True,
     False,
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::String(x) => write!(f, "{x}")?,
+            Value::Function(_f) => write!(f, "function")?,
+            Value::Number(x) => write!(f, "{x}")?,
+            Value::Nothing => {},
+            Value::True => write!(f, "true")?,
+            Value::False => write!(f, "false")?,
+        };
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -103,10 +117,7 @@ impl VM {
 
     fn display_builtin(values: &[Value]) -> Value {
         for value in values {
-            match value {
-                Value::String(x) => println!("{x}"),
-                _ => todo!(),
-            }
+            println!("{value}");
         }
 
         Value::Nothing

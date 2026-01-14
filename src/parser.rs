@@ -16,9 +16,9 @@ pub fn parse_sexpr<'a>() -> impl Parser<'a, &'a str, Sexpr, extra::Err<Simple<'a
             .map(|x: &str| x.to_string())
             .or(one_of("+-*/=><").map(|x: char| x.to_string()));
 
-        let string = one_of::<_, _, extra::Err<Simple<'a, char>>>("\"'")
-            .ignore_then(none_of("\"'").repeated().collect::<String>())
-            .then_ignore(one_of("\"'"))
+        let string = one_of::<_, _, extra::Err<Simple<'a, char>>>("\"")
+            .ignore_then(none_of("\"").repeated().collect::<String>())
+            .then_ignore(one_of("\""))
             .padded()
             .map(Sexpr::String);
 
