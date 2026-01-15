@@ -4,6 +4,7 @@ use crate::parser::Sexpr;
 
 #[derive(Debug, Clone)]
 pub enum Value {
+    LiteralList(Vec<Value>),
     String(String),
     Function(Function),
     Number(f32),
@@ -21,6 +22,16 @@ impl Display for Value {
             Value::Nothing => {}
             Value::True => write!(f, "true")?,
             Value::False => write!(f, "false")?,
+            Value::LiteralList(l) => {
+                write!(f, "'(")?;
+                if let Some(first) = l.first() {
+                    write!(f, "{first}")?;
+                }
+                for value in l.iter().skip(1) {
+                    write!(f, " {value}")?;
+                }
+                write!(f, ")")?;
+            }
         };
         Ok(())
     }
@@ -54,6 +65,10 @@ impl VM {
                 (
                     "+".to_string(),
                     Value::Function(Function::Builtin(VM::add_builtin)),
+                ),
+                (
+                    "*".to_string(),
+                    Value::Function(Function::Builtin(VM::mul_builtin)),
                 ),
                 (
                     "-".to_string(),
@@ -131,6 +146,16 @@ impl VM {
         Value::Number(total)
     }
 
+    fn mul_builtin(values: &[Value]) -> Value {
+        let mut total = 1f32;
+        for value in values {
+            let Value::Number(x) = value else { todo!() };
+            total *= x;
+        }
+
+        Value::Number(total)
+    }
+
     fn sub_builtin(values: &[Value]) -> Value {
         let Value::Number(mut total) = values[0] else {
             todo!()
@@ -179,6 +204,9 @@ impl VM {
             Sexpr::String(x) => Value::String(x.clone()),
             Sexpr::Number(x) => Value::Number(*x),
             Sexpr::Ident(x) => self.get_variable(&x).unwrap(),
+            Sexpr::LiteralList(list) => {
+                Value::LiteralList(list.iter().map(|expr| self.evaluate(expr)).collect())
+            }
             Sexpr::List(list) => {
                 if let Some(prefix) = list.first() {
                     match prefix {
