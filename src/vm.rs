@@ -64,6 +64,10 @@ impl VM {
                     "begin".to_string(),
                     VM::begin_special_case as fn(&mut Self, &[Sexpr]) -> Value,
                 ),
+                (
+                    "list".to_string(),
+                    VM::list_special_case as fn(&mut Self, &[Sexpr]) -> Value,
+                ),
             ]),
             variables: vec![HashMap::from([
                 (
@@ -146,6 +150,21 @@ impl VM {
             output = self.evaluate(expr);
         }
         output
+    }
+
+    fn list_special_case(&mut self, exprs: &[Sexpr]) -> Value {
+        let mut output = Vec::new();
+        for expr in &exprs[1..] {
+            match expr {
+                Sexpr::LiteralList(x) | Sexpr::List(x) => {
+                    for e in x {
+                        output.push(self.evaluate(e));
+                    }
+                }
+                _ => output.push(self.evaluate(&expr)),
+            }
+        }
+        Value::LiteralList(output)
     }
 
     fn add_builtin(values: &[Value]) -> Value {
