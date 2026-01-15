@@ -60,6 +60,10 @@ impl VM {
                     "define".to_string(),
                     VM::define_special_case as fn(&mut Self, &[Sexpr]) -> Value,
                 ),
+                (
+                    "begin".to_string(),
+                    VM::begin_special_case as fn(&mut Self, &[Sexpr]) -> Value,
+                ),
             ]),
             variables: vec![HashMap::from([
                 (
@@ -134,6 +138,14 @@ impl VM {
         };
 
         Value::Nothing
+    }
+
+    fn begin_special_case(&mut self, exprs: &[Sexpr]) -> Value {
+        let mut output = Value::Nothing;
+        for expr in &exprs[1..] {
+            output = self.evaluate(expr);
+        }
+        output
     }
 
     fn add_builtin(values: &[Value]) -> Value {
